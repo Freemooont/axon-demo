@@ -1,13 +1,7 @@
 package com.codefactory.demo.domain;
 
-import com.codefactory.demo.command.CancelPresentationCommand;
-import com.codefactory.demo.command.ConfirmPresentationCommand;
-import com.codefactory.demo.command.RefinePresentationCommand;
-import com.codefactory.demo.command.RegisterPresentationCommand;
-import com.codefactory.demo.event.PresentationCanceledEvent;
-import com.codefactory.demo.event.PresentationConfirmedEvent;
-import com.codefactory.demo.event.PresentationRefinedEvent;
-import com.codefactory.demo.event.PresentationRegisteredEvent;
+import com.codefactory.demo.command.*;
+import com.codefactory.demo.event.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -37,6 +31,7 @@ public class Presentation {
     private LocalDateTime presentationDate;
     private long durationMinutes;
     private PresentationStatus status;
+    private int pizzas;
 
     @CommandHandler
     public Presentation(RegisterPresentationCommand cmd) {
@@ -72,6 +67,18 @@ public class Presentation {
             throw new IllegalArgumentException("Presentation isn't finished in expected time");
         }
         AggregateLifecycle.apply(new PresentationConfirmedEvent(cmd.getPresentationId()));
+    }
+
+    @CommandHandler
+    public void handle(OrderPizzaCommand cmd) {
+        if (pizzas > 10) {
+            throw new IllegalArgumentException("to many pizzas");
+        }
+        if (status != PresentationStatus.CONFIRMED) {
+            throw new IllegalArgumentException("presentation isn't confirmed");
+        }
+
+        AggregateLifecycle.apply(new PizzaOrdered(cmd.getPresentationId(), cmd.getPizzas()));
     }
 
     @EventSourcingHandler

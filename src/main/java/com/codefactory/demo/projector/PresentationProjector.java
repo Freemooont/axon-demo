@@ -2,15 +2,13 @@ package com.codefactory.demo.projector;
 
 import com.codefactory.demo.domain.PresentationStatus;
 import com.codefactory.demo.domain.entity.PresentationEntity;
-import com.codefactory.demo.event.PresentationCanceledEvent;
-import com.codefactory.demo.event.PresentationConfirmedEvent;
-import com.codefactory.demo.event.PresentationRefinedEvent;
-import com.codefactory.demo.event.PresentationRegisteredEvent;
+import com.codefactory.demo.event.*;
 import com.codefactory.demo.query.PresentationByIdQuery;
 import com.codefactory.demo.query.PresentationListQuery;
 import com.codefactory.demo.repository.CFPresentationRepository;
 import lombok.AllArgsConstructor;
 import org.axonframework.eventhandling.EventHandler;
+import org.axonframework.eventhandling.ResetHandler;
 import org.axonframework.eventsourcing.EventSourcingHandler;
 import org.axonframework.queryhandling.QueryHandler;
 import org.springframework.stereotype.Component;
@@ -48,9 +46,17 @@ public class PresentationProjector {
         presentationRepository.findById(evt.getPresentationId()).ifPresent( pres -> pres.setStatus(PresentationStatus.CANCELED));
     }
 
-    @EventSourcingHandler
+    @EventHandler
     public void on(PresentationConfirmedEvent evt) {
         presentationRepository.findById(evt.getPresentationId()).ifPresent( pres -> pres.setStatus(PresentationStatus.CONFIRMED));
+    }
+
+    @EventHandler
+    public void on(PizzaOrdered evt) {
+        presentationRepository.findById(evt.getPresentationId()).ifPresent( pres -> {
+            pres.setStatus(PresentationStatus.PIZZA_ORDERED);
+            pres.setPizzasOrdered(evt.getPizzas());
+        });
     }
 
     @QueryHandler
@@ -62,5 +68,10 @@ public class PresentationProjector {
     public PresentationEntity query(PresentationByIdQuery criteria) {
         return presentationRepository.findById(criteria.getPreasentationId())
                 .orElseThrow(() -> new IllegalArgumentException("No presentation found by id: " + criteria.getPreasentationId()));
+    }
+
+    @ResetHandler
+    public void reset() {
+        presentationRepository.deleteAll();
     }
 }

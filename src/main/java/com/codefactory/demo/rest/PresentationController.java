@@ -1,11 +1,9 @@
 package com.codefactory.demo.rest;
 
-import com.codefactory.demo.command.CancelPresentationCommand;
-import com.codefactory.demo.command.ConfirmPresentationCommand;
-import com.codefactory.demo.command.RefinePresentationCommand;
+import com.codefactory.demo.Replayer;
+import com.codefactory.demo.command.*;
 import com.codefactory.demo.query.PresentationByIdQuery;
 import com.codefactory.demo.query.PresentationListQuery;
-import com.codefactory.demo.command.RegisterPresentationCommand;
 import com.codefactory.demo.domain.entity.PresentationEntity;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
@@ -30,6 +28,8 @@ import static org.axonframework.messaging.responsetypes.ResponseTypes.multipleIn
 public class PresentationController {
     private final CommandGateway commandGateway;
     private final QueryGateway queryGateway;
+
+    private final Replayer replayer;
 
     @PostMapping(value = "/presentations")
     public ResponseEntity<UUID> savePresentation(@RequestBody RegisterPresentationCommand cmd) {
@@ -69,6 +69,16 @@ public class PresentationController {
 
         return ResponseEntity.ok(presentationId);
     }
+
+    @PostMapping(value = "/presentations/{presentationId}/pizza")
+    public ResponseEntity<UUID> confirm(@RequestBody OrderPizzaCommand cmd, @PathVariable("presentationId") UUID presentationId) {
+        CommandMessage<OrderPizzaCommand> command =
+                new GenericCommandMessage<>(cmd);
+
+        commandGateway.sendAndWait(command);
+
+        return ResponseEntity.ok(presentationId);
+    }
     @GetMapping(value = "/presentations")
     public ResponseEntity<List<PresentationEntity>> getPresentations() {
         CompletableFuture<List<PresentationEntity>> criteria = queryGateway.query(new PresentationListQuery(), multipleInstancesOf(PresentationEntity.class));
@@ -82,5 +92,11 @@ public class PresentationController {
         CompletableFuture<PresentationEntity> criteria = queryGateway.query(new PresentationByIdQuery(presentationId), instanceOf(PresentationEntity.class));
 
         return ResponseEntity.ok(criteria.get());
+    }
+
+    @PostMapping("/replay")
+    public String replay() {
+        replayer.replay("com.codefactory.demo.projector");
+        return "Replay started...";
     }
 }
